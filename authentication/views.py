@@ -31,6 +31,14 @@ def login_endpoint(request):
     except json.JSONDecodeError:
         return JsonResponse({"status": "invalid_request"})
 
+    # Validate hash format before database query
+    if (
+        not auth_hash
+        or len(auth_hash) != 64
+        or not all(c in "0123456789abcdefABCDEF" for c in auth_hash)
+    ):
+        return JsonResponse({"status": "invalid"})  # Same response as "user not found"
+
     # Look up user
     user = JuraUser.objects.filter(auth_hash=auth_hash).first()
 
