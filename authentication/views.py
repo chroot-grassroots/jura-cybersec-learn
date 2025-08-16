@@ -1,43 +1,44 @@
-from django.shortcuts import render
 from django.http import JsonResponse
 from .models import JuraUser
-import hashlib
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django_ratelimit.decorators import ratelimit
+import json
 
-def register_view(request):
-    if request.method == 'POST':
-        # For testing - normally this would be done client-side
-        username = request.POST.get('username')
-        passphrase = request.POST.get('passphrase')
-        recovery_enabled = request.POST.get('recovery_enabled') == 'on'
-        
-        # Simple hash for testing (normally done client-side with proper crypto)
-        auth_hash = hashlib.sha256(f"{username}{passphrase}".encode()).hexdigest()
-        
-        try:
-            user = JuraUser.objects.create(
-                auth_hash=auth_hash,
-                recovery_enabled=recovery_enabled
-            )
-            return JsonResponse({
-                'status': 'User created',
-                'masked_hash': f"{auth_hash[:8]}..."
-            })
-        except Exception as e:
-            return JsonResponse({'status': 'Error', 'message': str(e)})
-    
-    return render(request, 'authentication/register.html')
 
-def login_view(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        passphrase = request.POST.get('passphrase')
-        
-        # Generate same hash
-        auth_hash = hashlib.sha256(f"{username}{passphrase}".encode()).hexdigest()
-        
-        if JuraUser.objects.filter(auth_hash=auth_hash).exists():
-            return JsonResponse({'status': 'User found'})
-        else:
-            return JsonResponse({'status': 'User not found'})
-    
-    return render(request, 'authentication/login.html')
+@csrf_exempt  #  Required for PyScript JSON requests
+@ratelimit(
+    key="ip", rate="5/m", method="POST", block=True
+)  # 5  attempts per minute per IP
+@require_http_methods(["POST"])
+def login_endpoint(request):
+    """
+    Authenticate user with zero-knowledge auth hash.
+
+    Expects JSON: {"auth_hash": "64-char-hex-string"}
+    Returns: {"status": "success|invalid|invalid_request"}
+    Rate limited: 5 attempts per minute per IP.
+    """
+
+    # Validate content type
+    if request.content_type != "application/json":
+        return JsonResponse({"status": "invalid_request"})
+
+    try:
+        # Parse JSON data
+        data = json.loads(request.body)
+        auth_hash = data.get("auth_hash")
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "invalid_request"})
+
+    # Look up user
+    user = JuraUser.objects.filter(auth_hash=auth_hash).first()
+
+    if user:
+        request.session["auth_hash"] = auth_hash  # Store user identifier
+        request.session["authenticated"] = True  # Mark as authenticated
+        return JsonResponse({"status": "success"})
+    else:
+        return JsonResponse(
+            {"status": "invalid"}
+        )  # Covers "not found", "none", and "malformed"

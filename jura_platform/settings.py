@@ -122,3 +122,8 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# Security settings
+SESSION_COOKIE_SAMESITE = 'Lax'  # Mitigates against CSRF with pyscript
+SESSION_COOKIE_HTTPONLY = True   # Prevents JavaScript access to session cookie
