@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Registration</title>
+</head>
+<body>
+    <h1>Test User Registration</h1>
+    <form method="post">
+        {% csrf_token %}
+        <p>
+            <label>Username:</label>
+            <input type="text" name="username" required>
+        </p>
+        <p>
+            <label>Passphrase:</label>
+            <input type="password" name="passphrase" required>
+        </p>
+        <p>
+            <label>
+                <input type="checkbox" name="recovery_enabled">
+                Enable Recovery Mode
+            </label>
+        </p>
+        <input type="submit" value="Register (Test)">
+    </form>
+    
+    <p><a href="{% url 'authentication:login' %}">Test Login</a></p>
+</body>
+</html>

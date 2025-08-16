@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Login</title>
+</head>
+<body>
+    <h1>Test User Login</h1>
+    <form method="post">
+        {% csrf_token %}
+        <p>
+            <label>Username:</label>
+            <input type="text" name="username" required>
+        </p>
+        <p>
+            <label>Passphrase:</label>
+            <input type="password" name="passphrase" required>
+        </p>
+        <input type="submit" value="Login (Test)">
+    </form>
+    
+    <p><a href="{% url 'authentication:register' %}">Test Registration</a></p>
+</body>
+</html>
